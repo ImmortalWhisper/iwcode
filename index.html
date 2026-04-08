@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Omega Rarities – Spending Leaderboard</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #0f1115;
+      color: #eaeaea;
+      padding: 20px;
+    }
+
+    .disclaimer {
+      background: #1a1d24;
+      border-left: 4px solid #facc15;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+      color: #d1d5db;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 5px;
+    }
+
+    .totals {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .total-robux {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #6ee7b7;
+    }
+
+    .after-tax {
+      font-size: 1rem;
+      color: #93c5fd;
+      margin-top: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #2a2d35;
+      text-align: left;
+    }
+
+    th {
+      background: #1a1d24;
+    }
+
+    tr:hover {
+      background: #161a22;
+    }
+
+    .rank {
+      width: 60px;
+      text-align: center;
+      color: #aaa;
+    }
+
+    .robux {
+      text-align: right;
+      font-weight: bold;
+      color: #6ee7b7;
+    }
+  </style>
+</head>
+<body>
+
+<div class="disclaimer">
+  ⚠️ This leaderboard may be inaccurate. Totals are calculated automatically based on data from the <strong>Purchases</strong> channel and may not reflect all transactions.
+</div>
+
+<h1>💰 Omega Rarities – Top Spenders</h1>
+
+<div class="totals">
+  <div id="totalRobux" class="total-robux"></div>
+  <div id="afterTaxRobux" class="after-tax"></div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th class="rank">#</th>
+      <th>Player</th>
+      <th class="robux">Total Robux Spent</th>
+    </tr>
+  </thead>
+  <tbody id="leaderboard"></tbody>
+</table>
+
+<script>
+async function loadData() {
+  const res = await fetch("index.json");
+  const messages = await res.json();
+
+  const totals = {};
+  let grandTotal = 0;
+
+  for (const msg of messages) {
+    if (!msg.embeds || msg.embeds.length === 0) continue;
+
+    for (const embed of msg.embeds) {
+      if (!embed.fields || !embed.title) continue;
+
+      const priceField = embed.fields.find(f =>
+        f.value && f.value.includes("Price:")
+      );
+      if (!priceField) continue;
+
+      const buyer = embed.title.split(" (")[0].trim();
+
+      const match = priceField.value.match(/Price:\s*([\d,]+)/i);
+      if (!match) continue;
+
+      const price = parseInt(match[1].replace(/,/g, ""), 10);
+
+      totals[buyer] = (totals[buyer] || 0) + price;
+      grandTotal += price;
+    }
+  }
+
+  const afterTax = Math.floor(grandTotal * 0.7);
+
+  document.getElementById("totalRobux").textContent =
+    `Total Robux Spent: ${grandTotal.toLocaleString()} Robux`;
+
+  document.getElementById("afterTaxRobux").textContent =
+    `After 30% Roblox Tax: ${afterTax.toLocaleString()} Robux`;
+
+  renderLeaderboard(totals);
+}
+
+function renderLeaderboard(totals) {
+  const tbody = document.getElementById("leaderboard");
+  tbody.innerHTML = "";
+
+  const sorted = Object.entries(totals)
+    .sort((a, b) => b[1] - a[1]);
+
+  sorted.forEach(([player, amount], index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="rank">${index + 1}</td>
+      <td>${player}</td>
+      <td class="robux">${amount.toLocaleString()} Robux</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+loadData();
+</script>
+
+</body>
+</html>
